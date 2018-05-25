@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+
+<script src="https://d3js.org/d3.v5.min.js"></script>
+
+
+</head>
+
+<body>
+
+<h1>SNAKE!</h1>
+
+<svg></svg>
+<br/>
+<p id="comment"></p>
+<input id="slider" type="range">
+<script>
+
+class Display {
+	constructor(data) {		
+		this.CELL_WIDTH = 20;
+		this.CELL_HEIGHT = 20;
+
+		this.data = data;
+		this.ts = null;
+		
+		this.svg = d3.select("svg");
+		this.comment = d3.select("#comment");
+		this.svg
+			.attr("width", data.width*(this.CELL_WIDTH+1))
+			.attr("height", data.height*(this.CELL_HEIGHT+1));
+		this.svg.append("g")
+			.append("rect")
+			.attr("width", data.width*(this.CELL_WIDTH+1))
+			.attr("height", data.height*(this.CELL_HEIGHT+1));
+			
+		this.blocksGroup = this.svg.append("g");
+		
+		var that = this;
+		d3.select("#slider")
+			.attr("value", 0)
+			.attr("min", 0)
+			.attr("max", data.steps.length-1)
+			.on('input', function() { that.setTs(+this.value); });
+	}
+	
+	setTs(ts) {
+		this.ts = ts;
+		this._draw();
+	}
+	
+	_draw() {
+		this.comment.text(this.data.steps[this.ts].comment);
+		var bg = this.blocksGroup.selectAll("rect").data(this.data.steps[this.ts].pts);
+		
+		bg.enter().append("rect")
+			.merge(bg)
+			.attr("x", p => p.x*(this.CELL_WIDTH+1))
+			.attr("y", p => p.y*(this.CELL_HEIGHT+1))
+			.attr("width", this.CELL_WIDTH)
+			.attr("height", this.CELL_HEIGHT)
+			.attr("fill", p => 
+				({fruit: "red", snake: "white"}[p.type])
+			);
+		bg.exit().remove();
+	}
+};
+
+fetch('/data.json',{
+	 credentials: 'same-origin'
+	
+})
+.then(res => res.json())
+.then(res => {
+	var d = new Display(res);
+	d.setTs(0);
+});
+
+</script>
+
+</body>
+</html>
