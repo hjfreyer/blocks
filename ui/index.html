@@ -68,7 +68,8 @@ class Display {
 };
 
 fetch('/data.json',{
-	 credentials: 'same-origin'
+	 credentials: 'same-origin',
+	 cache: 'reload',
 	
 })
 .then(res => res.json())

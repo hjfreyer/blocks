@@ -6,8 +6,7 @@ import numpy as np
 import snake
 
 MAX_ROUNDS = 1000
-WIDTH = 11
-HEIGHT = 11
+SIZE = 11
 
 UNITS = 16
 INPUTS = 9
@@ -39,7 +38,7 @@ def apply_model(g, model):
 	
 
 def do_game(model):
-	g = snake.InitGame(WIDTH, HEIGHT)
+	g = snake.InitGame(SIZE)
 	
 	step = 0
 	while step < 1000 and g.state == 'LIVE':
