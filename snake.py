@@ -92,11 +92,11 @@ def get_eye(g, dir):
 		raise Exception("Ahhhh")
 		
 	fruit_div = vect_div([g.fruit-head], dir)
-	fruit_idx = int(fruit_div[0]) if fruit_div[0] > 0 else -1
+	fruit_idx = int(fruit_div[0]) if fruit_div[0] > 0 else 100
 	
 	body_div = vect_div(g.body[1:] - head, dir)
 	body_div = body_div[0 < body_div]	
-	body_idx = int(body_div.min()) if len(body_div) else -1
+	body_idx = int(body_div.min()) if len(body_div) else 100
 	return [wall_idx, fruit_idx, body_idx]
 
  	
