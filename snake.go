@@ -198,7 +198,7 @@ func WriteGame(g []*SnakeGame, o io.Writer) error {
 	out.Steps = make([]stepFmt, len(g))
 
 	for idx, game := range g {
-		out.Steps[idx].Comment = fmt.Sprintf("%v", Stimulus(game))
+		out.Steps[idx].Comment = fmt.Sprintf("%d: %v", idx, Stimulus(game))
 		out.Steps[idx].Points = []ptFmt{
 			{game.Fruit.X, game.Fruit.Y, "fruit"},
 		}

@@ -1,31 +1,41 @@
 package main
 
 import (
-	"fmt"
-	"math/rand"
+	"log"
 	"os"
-	"runtime"
+	"os/signal"
 
 	"github.com/hjfreyer/blocks"
 )
 
 func main() {
-	fmt.Println(runtime.GOMAXPROCS(0))
-	return
-	model := make([]float64, blocks.ModelSize)
+	s := make(chan blocks.Stat)
 
-	for idx := range model {
-		model[idx] = rand.NormFloat64()
+	var latest blocks.Stat
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for _ = range c {
+		playAGame(latest.Best)
 	}
 
+	}()
+
+	go blocks.Evolve(s)
+
+i := 0
+	for ss := range s {
+		log.Print(i, ss.Max, ss.Avg)
+		latest = ss
+		i++
+	}
+
+}
+
+func playAGame(model []float64) {
 	s := blocks.NewGame(11)
 	hist := []*blocks.SnakeGame{s.Clone()}
-	for i := 0; i < 100 && s.State == blocks.Live; i++ {
-
-		for idx := range model {
-			model[idx] = rand.NormFloat64()
-		}
-
+	for i := 0; i < 100000 && s.State == blocks.Live; i++ {
 		stim := blocks.Stimulus(s)
 		move := blocks.ApplyModel(model, stim)
 
@@ -33,6 +43,10 @@ func main() {
 		hist = append(hist, s.Clone())
 
 	}
-	blocks.WriteGame(hist, os.Stdout)
-
+	f, err := os.Create("ui/data.json")
+	defer f.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	blocks.WriteGame(hist, f)
 }
