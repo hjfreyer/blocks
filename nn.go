@@ -3,7 +3,9 @@ package blocks
 import (
 	"math"
 	"math/rand"
+	"runtime"
 	"sort"
+	"sync"
 
 	"gonum.org/v1/gonum/mat"
 )
@@ -82,6 +84,7 @@ func Evolve(out chan<- Stat) {
 	e := &Evolver{
 		j: &Judger{},
 	}
+	e.j.start()
 
 	pop := &Population{
 		Members: make([]*Organism, popSize),
@@ -114,29 +117,48 @@ func runGame(model []float64) int {
 	lastLen := len(g.Body)
 	for i := 0; i < gameLimit && g.State == Live; i++ {
 		g.Move(ApplyModel(model, Stimulus(g)))
-		
+
 		if lastLen < len(g.Body) {
 			lastLen = len(g.Body)
 			lastIncrease = i
 		}
-		
-		if lastIncrease + 1000 < i {
+
+		if lastIncrease+1000 < i {
 			return len(g.Body)
 		}
 	}
 	return len(g.Body)
 }
 
-type Judger struct{}
+type Judger struct {
+	wg    sync.WaitGroup
+	input chan *Organism
+}
 
-func (*Judger) Judge(orgs []*Organism) {
+func (e *Judger) start() {
+	e.input = make(chan *Organism, 100)
+	for i := 0; i < runtime.GOMAXPROCS(0); i++ {
+		go e.run()
+	}
+}
+
+func (j *Judger) run() {
 	const gameCount = 5
-	for _, org := range orgs {
+	for org := range j.input {
 		for i := 0; i < gameCount; i++ {
 			org.NumGames++
 			org.TotalScore += runGame(org.Model)
 		}
+		j.wg.Done()
 	}
+}
+
+func (j *Judger) Judge(orgs []*Organism) {
+	j.wg.Add(len(orgs))
+	for _, o := range orgs {
+		j.input <- o
+	}
+	j.wg.Wait()
 }
 
 type Evolver struct {

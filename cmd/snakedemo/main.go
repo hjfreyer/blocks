@@ -16,14 +16,14 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for _ = range c {
-		playAGame(latest.Best)
-	}
+			playAGame(latest.Best)
+		}
 
 	}()
 
 	go blocks.Evolve(s)
 
-i := 0
+	i := 0
 	for ss := range s {
 		log.Print(i, ss.Max, ss.Avg)
 		latest = ss
