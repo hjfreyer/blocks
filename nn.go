@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	neurons = 12
+	neurons = 20
 	inputs  = 9
 	outputs = 3
 
@@ -19,8 +19,8 @@ const (
 	layer2Size = (neurons + 1) * outputs
 	ModelSize  = layer1Size + layer2Size
 
-	popSize = 100
-	popSave = 10
+	popSize = 500
+	popSave = 20
 )
 
 func ApplyModel(model []float64, input []float64) Move {
