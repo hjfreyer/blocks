@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/hjfreyer/blocks"
 )
@@ -24,10 +25,13 @@ func main() {
 	go blocks.Evolve(s)
 
 	i := 0
+	startTime := time.Now()
 	for ss := range s {
-		log.Print(i, ss.Max, ss.Avg)
-		latest = ss
 		i++
+		dur := (time.Now().Sub(startTime)) / time.Duration(i)
+		log.Print(i, ss.Max, ss.Avg, dur)
+		latest = ss
+
 	}
 
 }
