@@ -195,6 +195,33 @@ type ptFmt struct {
 	Type string `json:"type"`
 }
 
+func PlayFullGame(size int, mover Mover, history *[]*Game) int {
+	s := NewGame(size)
+	if history != nil {
+		*history = []*Game{s.Clone()}
+	}
+
+	const gameLimit = 10000
+	lastIncrease := 0
+	lastLen := len(s.Body)
+	for i := 0; i < gameLimit && s.State == Live; i++ {
+		s.Move(mover.Move(Stimulus(s)))
+		if history != nil {
+			*history = append(*history, s.Clone())
+		}
+
+		if lastLen < len(s.Body) {
+			lastLen = len(s.Body)
+			lastIncrease = i
+		}
+
+		if lastIncrease+1000 < i {
+			return len(s.Body)
+		}
+	}
+	return len(s.Body)
+}
+
 func WriteGame(g []*Game, o io.Writer) error {
 	var out gameFmt
 	out.Width = g[0].Size

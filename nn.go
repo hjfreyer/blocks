@@ -11,8 +11,6 @@ import (
 )
 
 const (
-	neurons      = 16
-	numMemories  = 8
 	senseInputs  = 9
 	senseOutputs = 3
 	popSize      = 500
@@ -45,9 +43,9 @@ type Stat struct {
 	Avg  float64
 }
 
-func Evolve(out chan<- Stat) {
+func Evolve(size, numNeurons, numMemories int, out chan<- Stat) {
 	e := &Evolver{
-		j: &Judger{},
+		j: &Judger{size: size, numNeurons: numNeurons, numMemories: numMemories},
 	}
 	e.j.start()
 
@@ -55,7 +53,7 @@ func Evolve(out chan<- Stat) {
 		Members: make([]*Organism, popSize),
 	}
 	for idx := range pop.Members {
-		model := make([]float64, simplenn.ModelSize(neurons, numMemories))
+		model := make([]float64, simplenn.ModelSize(numNeurons, numMemories))
 		for idx2 := range model {
 			model[idx2] = rand.NormFloat64() * 10
 		}
@@ -75,30 +73,12 @@ func Evolve(out chan<- Stat) {
 	}
 }
 
-func runGame(model []float64) int {
-	g := snake.NewGame(11)
-	snn := simplenn.New(neurons, numMemories, model)
-	const gameLimit = 10000
-	lastIncrease := 0
-	lastLen := len(g.Body)
-	for i := 0; i < gameLimit && g.State == snake.Live; i++ {
-		g.Move(snn.Move(snake.Stimulus(g)))
-
-		if lastLen < len(g.Body) {
-			lastLen = len(g.Body)
-			lastIncrease = i
-		}
-
-		if lastIncrease+1000 < i {
-			return len(g.Body)
-		}
-	}
-	return len(g.Body)
-}
-
 type Judger struct {
-	wg    sync.WaitGroup
-	input chan *Organism
+	wg          sync.WaitGroup
+	input       chan *Organism
+	size        int
+	numNeurons  int
+	numMemories int
 }
 
 func (e *Judger) start() {
@@ -113,7 +93,8 @@ func (j *Judger) run() {
 	for org := range j.input {
 		for i := 0; i < gameCount; i++ {
 			org.NumGames++
-			org.TotalScore += runGame(org.Model)
+			snn := simplenn.New(j.numNeurons, j.numMemories, org.Model)
+			org.TotalScore += snake.PlayFullGame(j.size, snn, nil)
 		}
 		j.wg.Done()
 	}

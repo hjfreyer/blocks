@@ -19,12 +19,21 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for _ = range c {
-			playAGame(latest.Best)
+			snn := simplenn.New(16, 8, latest.Best)
+			var hist []*snake.Game
+			snake.PlayFullGame(11, snn, &hist)
+
+			f, err := os.Create("ui/data.json")
+			defer f.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+			snake.WriteGame(hist, f)
 		}
 
 	}()
 
-	go blocks.Evolve(s)
+	go blocks.Evolve(11, 16, 8, s)
 
 	i := 0
 	startTime := time.Now()
@@ -35,22 +44,4 @@ func main() {
 		latest = ss
 
 	}
-
-}
-
-func playAGame(model []float64) {
-	s := snake.NewGame(11)
-	snn := simplenn.New(12, 4, model)
-	hist := []*snake.Game{s.Clone()}
-	for i := 0; i < 100000 && s.State == snake.Live; i++ {
-		s.Move(snn.Move(snake.Stimulus(s)))
-		hist = append(hist, s.Clone())
-
-	}
-	f, err := os.Create("ui/data.json")
-	defer f.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-	snake.WriteGame(hist, f)
 }
