@@ -41,7 +41,7 @@ func main() {
 func playAGame(model []float64) {
 	s := snake.NewGame(11)
 	snn := simplenn.New(12, 4, model)
-	hist := []*snake.SnakeGame{s.Clone()}
+	hist := []*snake.Game{s.Clone()}
 	for i := 0; i < 100000 && s.State == snake.Live; i++ {
 		s.Move(snn.Move(snake.Stimulus(s)))
 		hist = append(hist, s.Clone())

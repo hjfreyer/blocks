@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/hjfreyer/blocks/simplenn"
-	blocks "github.com/hjfreyer/blocks/snake"
+	"github.com/hjfreyer/blocks/snake"
 )
 
 const (
@@ -18,10 +18,6 @@ const (
 	popSize      = 500
 	popSave      = 20
 )
-
-type Mover interface {
-	Move(input []float64) blocks.Move
-}
 
 type Population struct {
 	Members []*Organism
@@ -80,13 +76,13 @@ func Evolve(out chan<- Stat) {
 }
 
 func runGame(model []float64) int {
-	g := blocks.NewGame(11)
+	g := snake.NewGame(11)
 	snn := simplenn.New(neurons, numMemories, model)
 	const gameLimit = 10000
 	lastIncrease := 0
 	lastLen := len(g.Body)
-	for i := 0; i < gameLimit && g.State == blocks.Live; i++ {
-		g.Move(snn.Move(blocks.Stimulus(g)))
+	for i := 0; i < gameLimit && g.State == snake.Live; i++ {
+		g.Move(snn.Move(snake.Stimulus(g)))
 
 		if lastLen < len(g.Body) {
 			lastLen = len(g.Body)
