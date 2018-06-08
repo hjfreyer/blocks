@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/hjfreyer/blocks"
+	"github.com/hjfreyer/blocks/simplenn"
+	"github.com/hjfreyer/blocks/snake"
 )
 
 func main() {
@@ -37,13 +39,11 @@ func main() {
 }
 
 func playAGame(model []float64) {
-	s := blocks.NewGame(11)
-	hist := []*blocks.SnakeGame{s.Clone()}
-	for i := 0; i < 100000 && s.State == blocks.Live; i++ {
-		stim := blocks.Stimulus(s)
-		move := blocks.ApplyModel(model, stim)
-
-		s.Move(move)
+	s := snake.NewGame(11)
+	snn := simplenn.New(12, 4, model)
+	hist := []*snake.SnakeGame{s.Clone()}
+	for i := 0; i < 100000 && s.State == snake.Live; i++ {
+		s.Move(snn.Move(snake.Stimulus(s)))
 		hist = append(hist, s.Clone())
 
 	}
@@ -52,5 +52,5 @@ func playAGame(model []float64) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	blocks.WriteGame(hist, f)
+	snake.WriteGame(hist, f)
 }
