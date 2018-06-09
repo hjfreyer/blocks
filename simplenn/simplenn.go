@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	senseInputs  = 9
-	senseOutputs = 3
+	senseInputs     = 9
+	senseOutputs    = 3
+	numMutateParams = 2
 )
 
 func layerSizes(numNeurons, numMemories int) (int, int) {
@@ -23,7 +24,7 @@ func layerSizes(numNeurons, numMemories int) (int, int) {
 
 func ModelSize(numNeurons, numMemories int) int {
 	l1, l2 := layerSizes(numNeurons, numMemories)
-	return l1 + l2
+	return numMutateParams + l1 + l2
 }
 
 type SimpleNN struct {
@@ -48,8 +49,9 @@ func (s *SimpleNN) Move(input []float64) snake.Move {
 	inputs := senseInputs + s.NumMemories
 	outputs := senseOutputs + s.NumMemories
 
-	layer1 := mat.NewDense(s.NumNeurons, inputs+1, s.Model[:l1s])
-	layer2 := mat.NewDense(outputs, s.NumNeurons+1, s.Model[l1s:])
+	layer1 := mat.NewDense(s.NumNeurons, inputs+1,
+		s.Model[numMutateParams:numMutateParams+l1s])
+	layer2 := mat.NewDense(outputs, s.NumNeurons+1, s.Model[numMutateParams+l1s:])
 
 	ins := make([]float64, 0, inputs+1)
 	ins = append(ins, input...)

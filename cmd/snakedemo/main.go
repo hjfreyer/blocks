@@ -11,6 +11,11 @@ import (
 	"github.com/hjfreyer/blocks/snake"
 )
 
+const (
+	metaMutateRate  = 0.1
+	metaMutateWidth = 0.1
+)
+
 func main() {
 	s := make(chan blocks.Stat)
 
@@ -33,7 +38,7 @@ func main() {
 
 	}()
 
-	go blocks.Evolve(11, 16, 8, s)
+	go blocks.Evolve(11, 16, 8, metaMutateRate, metaMutateWidth, s)
 
 	i := 0
 	startTime := time.Now()

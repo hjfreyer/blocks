@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"math"
 	"math/rand"
 	"runtime"
 	"sort"
@@ -16,6 +17,10 @@ const (
 	popSize      = 500
 	popSave      = 20
 )
+
+func sigmoid(x float64) float64 {
+	return 1.0 / (1.0 + math.Exp(-x))
+}
 
 type Population struct {
 	Members []*Organism
@@ -43,7 +48,7 @@ type Stat struct {
 	Avg  float64
 }
 
-func Evolve(size, numNeurons, numMemories int, out chan<- Stat) {
+func Evolve(size, numNeurons, numMemories int, metaMutateRate, metaMutateWidth float64, out chan<- Stat) {
 	e := &Evolver{
 		j: &Judger{size: size, numNeurons: numNeurons, numMemories: numMemories},
 	}
@@ -55,7 +60,7 @@ func Evolve(size, numNeurons, numMemories int, out chan<- Stat) {
 	for idx := range pop.Members {
 		model := make([]float64, simplenn.ModelSize(numNeurons, numMemories))
 		for idx2 := range model {
-			model[idx2] = rand.NormFloat64() * 10
+			model[idx2] = rand.NormFloat64()
 		}
 		pop.Members[idx] = &Organism{Model: model}
 	}
@@ -109,32 +114,43 @@ func (j *Judger) Judge(orgs []*Organism) {
 }
 
 type Evolver struct {
-	j *Judger
+	j               *Judger
+	metaMutateRate  float64
+	metaMutateWidth float64
 }
 
 func (e *Evolver) DoGeneration(p *Population) {
-	reproduce(p.Members[popSave:], p.Members[:popSave])
+	e.reproduce(p.Members[popSave:], p.Members[:popSave])
 	e.j.Judge(p.Members)
 	sort.Sort(p)
 }
 
-func reproduce(dst, src []*Organism) {
+func (e *Evolver) reproduce(dst, src []*Organism) {
 	for didx := range dst {
 		rents := rand.Perm(len(src))[:2]
-		newModel := crossOver(src[rents[0]].Model, src[rents[1]].Model)
+		newModel := e.crossOver(src[rents[0]].Model, src[rents[1]].Model)
 		dst[didx] = &Organism{Model: newModel}
 	}
 }
 
-func crossOver(a, b []float64) []float64 {
+func (e *Evolver) crossOver(a, b []float64) []float64 {
 	newModel := make([]float64, len(a))
 	cutOff := rand.Intn(len(a) + 1)
 	copy(newModel[:cutOff], a[:cutOff])
 	copy(newModel[cutOff:], b[cutOff:])
 
-	for idx := range newModel {
-		if rand.Float64() < 0.05 {
-			newModel[idx] += rand.NormFloat64() * 5
+	for idx := range newModel[:2] {
+		if rand.Float64() < e.metaMutateRate {
+			newModel[idx] *= 1 + e.metaMutateWidth*rand.NormFloat64()
+		}
+	}
+
+	mutateRate := sigmoid(newModel[0])
+	mutateWidth := newModel[1]
+
+	for idx := range newModel[2:] {
+		if rand.Float64() < sigmoid(mutateRate) {
+			newModel[idx+2] *= 1 + rand.NormFloat64()*mutateWidth
 		}
 	}
 
