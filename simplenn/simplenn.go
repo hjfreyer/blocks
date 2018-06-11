@@ -32,26 +32,43 @@ type SimpleNN struct {
 	NumMemories int
 	Model       []float64
 
+	layer1 *mat.Dense
+	layer2 *mat.Dense
+}
+
+type SimpleNNGame struct {
+	snn      *SimpleNN
 	memories []float64
 }
 
 func New(numNeurons, numMemories int, model []float64) *SimpleNN {
+	l1s, _ := layerSizes(numNeurons, numMemories)
+	inputs := senseInputs + numMemories
+	outputs := senseOutputs + numMemories
+
+	layer1 := mat.NewDense(numNeurons, inputs+1,
+		model[numMutateParams:numMutateParams+l1s])
+	layer2 := mat.NewDense(outputs, numNeurons+1, model[numMutateParams+l1s:])
+
 	return &SimpleNN{
 		NumNeurons:  numNeurons,
 		NumMemories: numMemories,
 		Model:       model,
-		memories:    make([]float64, numMemories),
+
+		layer1: layer1,
+		layer2: layer2,
 	}
 }
 
-func (s *SimpleNN) Move(input []float64) snake.Move {
-	l1s, _ := layerSizes(s.NumNeurons, s.NumMemories)
-	inputs := senseInputs + s.NumMemories
-	outputs := senseOutputs + s.NumMemories
-
-	layer1 := mat.NewDense(s.NumNeurons, inputs+1,
-		s.Model[numMutateParams:numMutateParams+l1s])
-	layer2 := mat.NewDense(outputs, s.NumNeurons+1, s.Model[numMutateParams+l1s:])
+func (s *SimpleNN) NewGame() *SimpleNNGame {
+	return &SimpleNNGame{
+		snn:      s,
+		memories: make([]float64, s.NumMemories),
+	}
+}
+func (s *SimpleNNGame) Move(input []float64) snake.Move {
+	inputs := senseInputs + len(s.memories)
+	outputs := senseOutputs + len(s.memories)
 
 	ins := make([]float64, 0, inputs+1)
 	ins = append(ins, input...)
@@ -60,17 +77,17 @@ func (s *SimpleNN) Move(input []float64) snake.Move {
 
 	v0 := mat.NewVecDense(len(ins), ins)
 
-	v1 := mat.NewVecDense(s.NumNeurons, nil)
-	v1.MulVec(layer1, v0)
+	v1 := mat.NewVecDense(s.snn.NumNeurons, nil)
+	v1.MulVec(s.snn.layer1, v0)
 	rv := v1.RawVector().Data
 
 	for idx, w := range rv {
 		rv[idx] = math.Tanh(w)
 	}
 	rv = append(rv, 1)
-	v0 = mat.NewVecDense(s.NumNeurons+1, rv)
+	v0 = mat.NewVecDense(s.snn.NumNeurons+1, rv)
 	v1 = mat.NewVecDense(outputs, nil)
-	v1.MulVec(layer2, v0)
+	v1.MulVec(s.snn.layer2, v0)
 
 	maxIdx := 0
 
@@ -80,7 +97,6 @@ func (s *SimpleNN) Move(input []float64) snake.Move {
 		}
 	}
 
-	s.memories = make([]float64, s.NumMemories)
 	for i := range s.memories {
 		s.memories[i] = math.Tanh(v1.AtVec(senseOutputs + i))
 	}

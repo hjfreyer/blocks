@@ -62,8 +62,11 @@ func Evolve(size, numNeurons, numMemories int, metaMutateRate, metaMutateWidth f
 		for idx2 := range model {
 			model[idx2] = rand.NormFloat64()
 		}
+		model[0] = 0.1
+		model[1] = 0.1
 		pop.Members[idx] = &Organism{Model: model}
 	}
+	e.j.Judge(pop.Members)
 
 	for {
 		e.DoGeneration(pop)
@@ -96,10 +99,10 @@ func (e *Judger) start() {
 func (j *Judger) run() {
 	const gameCount = 5
 	for org := range j.input {
+		snn := simplenn.New(j.numNeurons, j.numMemories, org.Model)
 		for i := 0; i < gameCount; i++ {
 			org.NumGames++
-			snn := simplenn.New(j.numNeurons, j.numMemories, org.Model)
-			org.TotalScore += snake.PlayFullGame(j.size, snn, nil)
+			org.TotalScore += snake.PlayFullGame(j.size, snn.NewGame(), nil)
 		}
 		j.wg.Done()
 	}
