@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"log"
 	"math"
 	"math/rand"
 	"runtime"
@@ -12,10 +13,11 @@ import (
 )
 
 const (
-	senseInputs  = 9
-	senseOutputs = 3
-	popSize      = 500
-	popSave      = 20
+	senseInputs   = 9
+	senseOutputs  = 3
+	popSize       = 500
+	numSpecies    = 10
+	speciesFactor = 570
 )
 
 func sigmoid(x float64) float64 {
@@ -123,17 +125,60 @@ type Evolver struct {
 }
 
 func (e *Evolver) DoGeneration(p *Population) {
-	e.reproduce(p.Members[popSave:], p.Members[:popSave])
+	p.Members = e.reproduce(p.Members)
 	e.j.Judge(p.Members)
 	sort.Sort(p)
 }
 
-func (e *Evolver) reproduce(dst, src []*Organism) {
-	for didx := range dst {
-		rents := rand.Perm(len(src))[:2]
-		newModel := e.crossOver(src[rents[0]].Model, src[rents[1]].Model)
-		dst[didx] = &Organism{Model: newModel}
+/*
+func species(model []float64) int {
+	seed := make([]byte, 8)
+	binary.LittleEndian.PutUint64(seed, math.Float64bits(model[2]))
+	return int(crc32.ChecksumIEEE(seed) % numSpecies)
+}
+*/
+func (e *Evolver) reproduce(src []*Organism) []*Organism {
+	species := speciate(src)
+	speciesByOrg := make([]int, len(src))
+	for sIdx, s := range species {
+		for _, oIdx := range s {
+			speciesByOrg[oIdx] = sIdx
+		}
 	}
+
+	log.Print(len(species))
+
+	//	bestPerSpecies := make([]*Organism, numSpecies)
+
+	weights := make([]float64, len(src))
+
+	for idx, o := range src {
+		weights[idx] = o.Score()
+
+		//		if bestPerSpecies[spec] == nil || bestPerSpecies[spec].Score() < o.Score() {
+		//			bestPerSpecies[spec] = o
+		//		}
+	}
+
+	for idx := range weights {
+		weights[idx] /= float64(len(species[speciesByOrg[idx]]))
+		//		weights[idx] = math.Exp(preventOverflow(weights[idx]))
+	}
+
+	dst := make([]*Organism, 0, len(src))
+	/*	for _, best := range bestPerSpecies {
+		if best != nil {
+			dst = append(dst, best)
+		}
+	}*/
+
+	for len(dst) < len(src) {
+		p1 := weightedRandomChoice(weights)
+		p2 := weightedRandomChoice(weights)
+		newModel := e.crossOver(src[p1].Model, src[p2].Model)
+		dst = append(dst, &Organism{Model: newModel})
+	}
+	return dst
 }
 
 func (e *Evolver) crossOver(a, b []float64) []float64 {
@@ -158,4 +203,57 @@ func (e *Evolver) crossOver(a, b []float64) []float64 {
 	}
 
 	return newModel
+}
+
+func speciate(orgs []*Organism) [][]int {
+	var res [][]int
+nextOrg:
+	for oIdx, o := range orgs {
+		for sIdx, s := range res {
+			if dist(orgs[s[0]].Model, o.Model) < speciesFactor {
+				res[sIdx] = append(res[sIdx], oIdx)
+				continue nextOrg
+			}
+		}
+		// No species found - make our own.
+		res = append(res, []int{oIdx})
+	}
+	return res
+}
+
+func dist(a, b []float64) float64 {
+	if len(a) != len(b) {
+		panic("ahhhh")
+	}
+	var total float64
+	for idx := range a {
+		total += math.Abs(a[idx] - b[idx])
+	}
+	return total
+}
+
+func weightedRandomChoice(distribution []float64) int {
+	var total float64
+	for _, val := range distribution {
+		total += val
+	}
+	r := rand.Float64() * total
+	var cumlWeight float64
+	for idx, weight := range distribution {
+		cumlWeight += weight
+		if r < cumlWeight {
+			return idx
+		}
+	}
+	panic("lolwut")
+}
+
+func preventOverflow(v float64) float64 {
+	if v > 7.09782712893383973096e+02 {
+		return 7.09782712893383973096e+02
+	}
+	if v < -7.45133219101941108420e+02 {
+		return -7.45133219101941108420e+02
+	}
+	return v
 }

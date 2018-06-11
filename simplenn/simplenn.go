@@ -10,7 +10,7 @@ import (
 const (
 	senseInputs     = 9
 	senseOutputs    = 3
-	numMutateParams = 2
+	numMutateParams = 3
 )
 
 func layerSizes(numNeurons, numMemories int) (int, int) {
