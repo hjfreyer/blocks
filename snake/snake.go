@@ -112,19 +112,18 @@ func contains(pts []image.Point, pt image.Point) bool {
 }
 
 func Stimulus(g *Game) []float64 {
-	var ints []int
-	ints = append(ints, eye(g, dirPlusMove(g.Direction, Left))...)
-	ints = append(ints, eye(g, dirPlusMove(g.Direction, Center))...)
-	ints = append(ints, eye(g, dirPlusMove(g.Direction, Right))...)
+	lw, lf, lb := eye(g, dirPlusMove(g.Direction, Left))
+	cw, cf, cb := eye(g, dirPlusMove(g.Direction, Center))
+	rw, rf, rb := eye(g, dirPlusMove(g.Direction, Right))
 
-	floats := make([]float64, 9)
-	for idx, i := range ints {
-		floats[idx] = float64(i)
+	return []float64{
+		float64(lw), float64(lf), float64(lb),
+		float64(cw), float64(cf), float64(cb),
+		float64(rw), float64(rf), float64(rb),
 	}
-	return floats
 }
 
-func eye(g *Game, dir image.Point) []int {
+func eye(g *Game, dir image.Point) (int, int, int) {
 	head := g.Body[0]
 
 	wallIdx := func() int {
@@ -155,7 +154,7 @@ func eye(g *Game, dir image.Point) []int {
 		}
 	}
 
-	return []int{wallIdx, fruitIdx, bodyIdx}
+	return wallIdx, fruitIdx, bodyIdx
 }
 
 func vectDiv(p, q image.Point) (int, bool) {
