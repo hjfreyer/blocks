@@ -17,7 +17,7 @@ const (
 	senseOutputs  = 3
 	popSize       = 500
 	numSpecies    = 10
-	speciesFactor = 570
+	speciesFactor = 0.7
 )
 
 func sigmoid(x float64) float64 {
@@ -35,9 +35,10 @@ func (p *Population) Less(i, j int) bool {
 }
 
 type Organism struct {
-	Model      []float64
-	NumGames   int
-	TotalScore int
+	Model          []float64
+	NumGames       int
+	TotalScore     int
+	CurrentSpecies int
 }
 
 func (o Organism) Score() float64 {
@@ -45,9 +46,14 @@ func (o Organism) Score() float64 {
 }
 
 type Stat struct {
-	Best []float64
-	Max  float64
-	Avg  float64
+	Generation int       `json:"generation"`
+	BestModel  []float64 `json:"bestModel"`
+	Orgs       []StatOrg `json:"orgs"`
+}
+
+type StatOrg struct {
+	Score   float64 `json:"score"`
+	Species int     `json:"species"`
 }
 
 func Evolve(size, numNeurons, numMemories int, metaMutateRate, metaMutateWidth float64, out chan<- Stat) {
@@ -70,16 +76,24 @@ func Evolve(size, numNeurons, numMemories int, metaMutateRate, metaMutateWidth f
 	}
 	e.j.Judge(pop.Members)
 
+	generation := 0
 	for {
 		e.DoGeneration(pop)
-		var s Stat
-		s.Best = pop.Members[0].Model
-		s.Max = pop.Members[0].Score()
-		for _, o := range pop.Members {
-			s.Avg += o.Score()
+
+		statOrgs := make([]StatOrg, len(pop.Members))
+		for idx, m := range pop.Members {
+			statOrgs[idx] = StatOrg{
+				Score:   m.Score(),
+				Species: m.CurrentSpecies,
+			}
 		}
-		s.Avg /= float64(len(pop.Members))
+		s := Stat{
+			Generation: generation,
+			BestModel:  pop.Members[0].Model,
+			Orgs:       statOrgs,
+		}
 		out <- s
+		generation++
 	}
 }
 
@@ -139,10 +153,9 @@ func species(model []float64) int {
 */
 func (e *Evolver) reproduce(src []*Organism) []*Organism {
 	species := speciate(src)
-	speciesByOrg := make([]int, len(src))
 	for sIdx, s := range species {
 		for _, oIdx := range s {
-			speciesByOrg[oIdx] = sIdx
+			src[oIdx].CurrentSpecies = sIdx
 		}
 	}
 
@@ -160,8 +173,8 @@ func (e *Evolver) reproduce(src []*Organism) []*Organism {
 		//		}
 	}
 
-	for idx := range weights {
-		weights[idx] /= float64(len(species[speciesByOrg[idx]]))
+	for idx, o := range src {
+		weights[idx] /= float64(len(species[o.CurrentSpecies]))
 		//		weights[idx] = math.Exp(preventOverflow(weights[idx]))
 	}
 
@@ -174,7 +187,13 @@ func (e *Evolver) reproduce(src []*Organism) []*Organism {
 
 	for len(dst) < len(src) {
 		p1 := weightedRandomChoice(weights)
-		p2 := weightedRandomChoice(weights)
+		var p2 int
+		if rand.Float64() < 0.01 {
+			p2 = rand.Intn(len(src))
+		} else {
+			cospecies := species[src[p1].CurrentSpecies]
+			p2 = rand.Intn(len(cospecies))
+		}
 		newModel := e.crossOver(src[p1].Model, src[p2].Model)
 		dst = append(dst, &Organism{Model: newModel})
 	}
@@ -229,7 +248,7 @@ func dist(a, b []float64) float64 {
 	for idx := range a {
 		total += math.Abs(a[idx] - b[idx])
 	}
-	return total
+	return total / float64(len(a))
 }
 
 func weightedRandomChoice(distribution []float64) int {
